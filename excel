@@ -1,0 +1,88 @@
+以下是一个基于 EasyExcel 的工具类，提供了模板导出和解析 Excel 文件为 List 数据的功能。
+```
+import com.alibaba.excel.ExcelReader;
+import com.alibaba.excel.ExcelWriter;
+import com.alibaba.excel.metadata.Sheet;
+import com.alibaba.excel.metadata.Table;
+import com.alibaba.excel.support.ExcelTypeEnum;
+import com.alibaba.excel.util.CollectionUtils;
+import com.alibaba.excel.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+public class ExcelUtils {
+    private static final Logger logger = LoggerFactory.getLogger(ExcelUtils.class);
+    public static <T> void writeExcel(HttpServletResponse response, String fileName, List<T> data, Class<T> clazz) throws IOException {
+        response.setContentType("application/vnd.ms-excel");
+        response.setHeader("Content-disposition", "attachment;filename=" + URLEncoder.encode(fileName, "UTF-8"));
+        ExcelWriter writer = new ExcelWriter(response.getOutputStream(), ExcelTypeEnum.XLSX, true);
+        Sheet sheet = new Sheet(1, 0, clazz);
+        sheet.setSheetName(fileName);
+        Table table = new Table(1);
+        List<List<String>> head = getHead(clazz);
+        table.setHead(head);
+        writer.write1(data, sheet, table);
+        writer.finish();
+        response.getOutputStream().flush();
+    }
+    public static <T> List<T> readExcel(InputStream inputStream, Class<T> clazz) {
+        List<T> data = new ArrayList<>();
+        ExcelReader reader = new ExcelReader(inputStream, ExcelTypeEnum.XLSX, null, new ExcelDataListener<T>(clazz, data));
+        reader.read(new Sheet(1, 1, clazz));
+        return data;
+    }
+    private static <T> List<List<String>> getHead(Class<T> clazz) {
+        List<List<String>> head = new ArrayList<>();
+        Map<Integer, String> headMap = new LinkedHashMap<>();
+        int index = 0;
+        for (int i = 0; i < clazz.getDeclaredFields().length; i++) {
+            if (clazz.getDeclaredFields()[i].isAnnotationPresent(ExcelProperty.class)) {
+                ExcelProperty property = clazz.getDeclaredFields()[i].getAnnotation(ExcelProperty.class);
+                int colIndex = property.index();
+                String colName = property.value();
+                if (StringUtils.isEmpty(colName)) {
+                    colName = clazz.getDeclaredFields()[i].getName();
+                }
+                headMap.put(colIndex, colName);
+            }
+        }
+        if (!CollectionUtils.isEmpty(headMap)) {
+            for (Map.Entry<Integer, String> entry : headMap.entrySet()) {
+                List<String> headList = new ArrayList<>();
+                index = entry.getKey() > index ? entry.getKey() : index;
+                headList.add(entry.getValue());
+                head.add(headList);
+            }
+        }
+        return head;
+    }
+    static class ExcelDataListener<T> extends AnalysisEventListener<T> {
+        private Class<T> clazz;
+        private List<T> data;
+        public ExcelDataListener(Class<T> clazz, List<T> data) {
+            this.clazz = clazz;
+            this.data = data;
+        }
+        @Override
+        public void invoke(T t, AnalysisContext analysisContext) {
+            data.add(t);
+        }
+        @Override
+        public void doAfterAllAnalysed(AnalysisContext analysisContext) {
+            logger.info("Read excel data finished.");
+        }
+    }
+}
+```
+这个工具类包含了两个方法，一个用于导出 Excel 文件，另一个用于解析 Excel 文件为 List 数据。
+`writeExcel` 方法接受一个 HttpServletResponse 对象、文件名、数据列表和数据类类型作为参数，用于将数据导出为带头部的 Excel 文件。这个方法使用了 EasyExcel 的 Sheet 和 Table 对象，可以根据传入的数据类类型自动生成表头。
+`readExcel` 方法接受一个 InputStream 对象和数据类类型作为参数，用于将 Excel 文件解析为 List 数据。这个方法使用了 EasyExcel 的 ExcelReader 和 AnalysisEventListener 对象，可以读取 Excel 文件并将数据转换为指定类型的 List。
+同时，这个工具类也使用了 EasyExcel 的 ExcelProperty 注解和 StringUtils 工具类，来帮助生成表头和解析 Excel 文件。
