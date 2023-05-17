@@ -1,0 +1,72 @@
+以下是一个完整的可以运行的例子，演示如何使用 dtree 实现新增节点和修改节点时树不折叠：
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>dtree demo</title>
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/layui/2.5.6/css/layui.min.css">
+</head>
+<body>
+    <div id="tree"></div>
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/layui/2.5.6/layui.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/dtree/2.5.0/dtree.min.js"></script>
+    <script>
+        // 定义树节点数据
+        var nodes = [{
+            id: 1,
+            title: '节点1',
+            parentId: 0
+        }, {
+            id: 2,
+            title: '节点2',
+            parentId: 1
+        }, {
+            id: 3,
+            title: '节点3',
+            parentId: 1
+        }];
+        // 初始化树
+        var dtree = layui.dtree;
+        dtree.render({
+            elem: '#tree',
+            data: nodes,
+            initLevel: 2
+        });
+        // 绑定新增节点按钮的点击事件
+        $('#add').on('click', function() {
+            // 获取选中的节点
+            var nodeId = dtree.getCheckbarNodesParam('id')[0];
+            // 创建新节点
+            var newNode = {
+                id: 4,
+                title: '新节点',
+                parentId: nodeId
+            };
+            // 获取父节点
+            var parentNode = dtree.getParentParam(nodeId);
+            // 在父节点下添加新节点
+            dtree.add(parentNode, newNode);
+            // 重新加载树，保持节点展开状态
+            dtree.reload(true);
+        });
+        // 绑定修改节点按钮的点击事件
+        $('#edit').on('click', function() {
+            // 获取选中的节点
+            var nodeId = dtree.getCheckbarNodesParam('id')[0];
+            // 获取需要修改的节点
+            var node = dtree.getNodeParam(nodeId);
+            // 更新节点信息
+            node.title = '修改后的节点';
+            // 调用更新方法
+            dtree.updateNode(node);
+            // 重新加载树，保持节点展开状态
+            dtree.reload(true);
+        });
+    </script>
+</body>
+</html>
+```
+在该例子中，首先定义了一个包含三个节点的树节点数据，然后使用 dtree 的 render 方法初始化树，并设置 initLevel 属性为 2，表示默认展开两级节点。然后绑定了两个按钮的点击事件，分别实现新增节点和修改节点的功能。在新增节点和修改节点时，都需要调用 dtree 的 add 或 updateNode 方法更新节点信息，并调用 dtree 的 reload 方法重新加载树，以便展示新增或修改后的节点信息。在调用 dtree 的 reload 方法时，需要设置参数为 true，以保持节点的展开状态。
