@@ -1,0 +1,78 @@
+在使用 PhantomJS 进行截图时，如果页面有 loading 状态，可能会导致截图出现问题，因为 loading 状态会覆盖页面的内容。以下是一些解决方法：
+
+1. 等待页面加载完成再截图
+
+可以等待页面加载完成后再进行截图。这可以通过监听 `page.onLoadFinished` 事件来实现。在事件回调函数中，可以等待一段时间，确保页面已经完全加载完成，然后再进行截图。
+
+示例代码：
+
+```javascript
+var page = require('webpage').create();
+page.open('http://example.com', function(status) {
+  if (status === 'success') {
+    console.log('Page loaded successfully');
+  } else {
+    console.log('Page failed to load');
+  }
+});
+page.onLoadFinished = function(status) {
+  console.log('Page finished loading');
+  setTimeout(function() {
+    page.render('example.png');
+  }, 3000); // 等待 3 秒
+};
+```
+
+2. 禁用页面加载动画
+
+有些页面的 loading 状态是通过加载动画实现的。可以通过设置 `page.settings.loadImages` 为 false 来禁用页面加载动画，从而避免 loading 状态的影响。
+
+示例代码：
+
+```javascript
+var page = require('webpage').create();
+page.settings.loadImages = false; // 禁用页面加载动画
+page.open('http://example.com', function(status) {
+  if (status === 'success') {
+    console.log('Page loaded successfully');
+    page.render('example.png');
+  } else {
+    console.log('Page failed to load');
+  }
+});
+```
+
+需要注意的是，禁用页面加载动画可能会导致页面显示效果不太好，因此建议根据实际情况选择是否禁用。
+
+3. 使用 evaluate 函数
+
+可以使用 PhantomJS 的 `page.evaluate` 函数来执行 JavaScript 代码，从而控制页面的行为。可以通过该函数来检查页面是否已经加载完成，然后再进行截图。
+
+示例代码：
+
+```javascript
+var page = require('webpage').create();
+page.open('http://example.com', function(status) {
+  if (status === 'success') {
+    console.log('Page loaded successfully');
+  } else {
+    console.log('Page failed to load');
+  }
+});
+page.evaluate(function() {
+  var interval = setInterval(function() {
+    if (document.readyState === 'complete') {
+      clearInterval(interval);
+      window.callPhantom(); // 通知 PhantomJS 页面已经加载完成
+    }
+  }, 100);
+});
+page.onCallback = function() {
+  console.log('Page finished loading');
+  page.render('example.png');
+};
+```
+
+在上面的示例中，使用 `page.evaluate` 函数来检查页面是否已经加载完成。该函数会定时检查 `document.readyState` 属性，如果该属性的值为 `'complete'`，则表示页面已经加载完成，清除定时器并调用 `window.callPhantom()` 方法通知 PhantomJS 页面已经加载完成。然后，在 `page.onCallback` 事件回调函数中，可以进行截图等操作。
+
+需要注意的是，使用 `page.evaluate` 函数可能会导致页面的渲染速度变慢，因此建议根据实际情况选择是否使用。
